@@ -131,9 +131,11 @@ func (mErr *MultiError) Format(f fmt.State, verb rune) {
 	}
 
 	for idx, err := range mErr.errors {
-		_, _ = io.WriteString(f, "error #")
-		_, _ = io.WriteString(f, strconv.FormatInt(int64(idx+1), 10))
-		_, _ = io.WriteString(f, "\n")
+		if verb == 'v' {
+			_, _ = io.WriteString(f, "error #")
+			_, _ = io.WriteString(f, strconv.FormatInt(int64(idx+1), 10))
+			_, _ = io.WriteString(f, "\n")
+		}
 		if errFmt, ok := err.(fmt.Formatter); ok {
 			errFmt.Format(f, verb)
 		} else {
