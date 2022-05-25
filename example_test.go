@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/actforgood/xerr"
 )
@@ -138,31 +139,62 @@ func ExampleWrap_withStackError() {
 	//         /usr/local/go/src/runtime/asm_amd64.s:1371
 }
 
-func ExampleMultiError_Add() {
+func ExampleMultiError_Add_sequential() {
 	files := []string{
 		"/this/file/does/not/exist/1",
 		"/this/file/does/not/exist/2",
 		"/this/file/does/not/exist/3",
 	}
-	var multiErr = xerr.NewMultiError()
+	var multiErr *xerr.MultiError // save allocation if Add is never called.
 	for _, file := range files {
 		if _, err := os.Open(file); err != nil {
-			multiErr.Add(err)
+			multiErr = multiErr.Add(err) // store allocated multiErr.
 		}
 		// else do something with that file ...
 	}
 
 	returnErr := multiErr.ErrOrNil()
-
 	fmt.Println(returnErr)
 
-	// Example output:
+	// Output:
 	// error #1
 	// open /this/file/does/not/exist/1: no such file or directory
 	// error #2
 	// open /this/file/does/not/exist/2: no such file or directory
 	// error #3
 	// open /this/file/does/not/exist/3: no such file or directory
+}
+
+func ExampleMultiError_Add_parallel() {
+	files := []string{
+		"/this/file/does/not/exist/1",
+		"/this/file/does/not/exist/2",
+		"/this/file/does/not/exist/3",
+	}
+	multiErr := xerr.NewMultiError() // we need instance already initialized.
+	var wg sync.WaitGroup
+	for _, file := range files {
+		wg.Add(1)
+		go func(filePath string, mErr *xerr.MultiError, waitGr *sync.WaitGroup) {
+			defer waitGr.Done()
+			if _, err := os.Open(filePath); err != nil {
+				_ = mErr.Add(err) // we can dismiss returned value as multiErr is already initialized.
+			}
+			// else do something with that file ...
+		}(file, multiErr, &wg)
+	}
+	wg.Wait()
+
+	returnErr := multiErr.ErrOrNil()
+	fmt.Println(returnErr)
+
+	// Example of unordered output:
+	// error #1
+	// open /this/file/does/not/exist/3: no such file or directory
+	// error #2
+	// open /this/file/does/not/exist/1: no such file or directory
+	// error #3
+	// open /this/file/does/not/exist/2: no such file or directory
 }
 
 func ExampleMultiError_AddOnce() {
@@ -172,9 +204,9 @@ func ExampleMultiError_AddOnce() {
 	err3 := os.ErrNotExist
 
 	var multiErr = xerr.NewMultiError()
-	multiErr.AddOnce(err1)
-	multiErr.AddOnce(err2)
-	multiErr.AddOnce(err3) // err3 is the same with err1, so it should be ignored
+	_ = multiErr.AddOnce(err1)
+	_ = multiErr.AddOnce(err2)
+	_ = multiErr.AddOnce(err3) // err3 is the same with err1, so it should be ignored
 
 	returnErr := multiErr.ErrOrNil()
 	fmt.Println(returnErr)
@@ -188,8 +220,8 @@ func ExampleMultiError_AddOnce() {
 
 func ExampleMultiError_Errors() {
 	var multiErr = xerr.NewMultiError()
-	multiErr.Add(errors.New("1st error"))
-	multiErr.Add(errors.New("2nd error"))
+	_ = multiErr.Add(errors.New("1st error"))
+	_ = multiErr.Add(errors.New("2nd error"))
 
 	for _, err := range multiErr.Errors() {
 		fmt.Println(err)
@@ -202,9 +234,9 @@ func ExampleMultiError_Errors() {
 
 func ExampleMultiError_Is() {
 	var multiErr = xerr.NewMultiError()
-	multiErr.Add(io.ErrUnexpectedEOF)
+	_ = multiErr.Add(io.ErrUnexpectedEOF)
 	someErrWithStack := xerr.New("stack err")
-	multiErr.Add(someErrWithStack)
+	_ = multiErr.Add(someErrWithStack)
 
 	fmt.Println(errors.Is(multiErr, io.ErrUnexpectedEOF))
 	fmt.Println(errors.Is(multiErr, someErrWithStack))

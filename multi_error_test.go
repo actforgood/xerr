@@ -17,58 +17,63 @@ import (
 	"github.com/actforgood/xerr"
 )
 
-func TestMultiError(t *testing.T) {
+func TestMultiError_initializedFromStart(t *testing.T) {
 	t.Parallel()
 
 	// arrange
 	var (
-		subject   = xerr.NewMultiError()
-		customErr = dummyCustomErr{}
-		stdErr1   = errors.New("some standard error 1")
-		stdErr2   = errors.New("some standard error 2")
-		stdErr3   = errors.New("some standard error 3")
+		subject    = xerr.NewMultiError()
+		customErr  = dummyCustomErr{}
+		extractErr dummyCustomErr
+		stdErr1    = errors.New("some standard error 1")
+		stdErr2    = errors.New("some standard error 2")
+		stdErr3    = errors.New("some standard error 3")
 	)
 
 	// act & assert
 	// test initial state
 	assertNil(t, subject.ErrOrNil())
+	assertNotNil(t, subject.Errors())
+	assertEqual(t, 0, len(subject.Errors()))
 	assertEqual(t, "", subject.Error())
 	assertEqual(t, "", fmt.Sprintf("%+v", subject))
+	assertFalse(t, errors.Is(subject, stdErr3))
+	assertFalse(t, errors.As(subject, &extractErr))
 
 	// add an error
-	subject.Add(stdErr1)
+	subject = subject.Add(stdErr1)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error(), subject.Error())
 	errs := subject.Errors()
 	assertEqual(t, []error{stdErr1}, errs)
 
 	// add nil
-	subject.Add(nil)
+	subject = subject.Add(nil)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error(), subject.Error())
 	assertEqual(t, []error{stdErr1}, subject.Errors())
 
 	// add another error
-	subject.Add(stdErr2)
+	subject = subject.Add(stdErr2)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error(), subject.Error())
 	assertEqual(t, 1, len(errs)) // see we got a copy the first time
 	assertEqual(t, []error{stdErr1, stdErr2}, subject.Errors())
 
 	// add unique an already existing error
-	subject.AddOnce(stdErr1)
+	subject = subject.AddOnce(stdErr1)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error(), subject.Error())
 	assertEqual(t, []error{stdErr1, stdErr2}, subject.Errors())
 
 	// add unique a new error
-	subject.AddOnce(customErr)
+	subject = subject.AddOnce(customErr)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error(), subject.Error())
 	assertEqual(t, []error{stdErr1, stdErr2, customErr}, subject.Errors())
 
 	// add unique a nil error and a new one
-	subject.AddOnce(customErr, nil, stdErr3)
+	subject = subject.AddOnce(customErr, nil, stdErr3)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error()+"\n"+stdErr3.Error(), subject.Error())
 	assertEqual(t, []error{stdErr1, stdErr2, customErr, stdErr3}, subject.Errors())
@@ -81,7 +86,89 @@ func TestMultiError(t *testing.T) {
 	assertFalse(t, errors.Is(subject, nil))
 	assertFalse(t, errors.Is(subject, errors.New("a different error")))
 
-	var extractErr dummyCustomErr
+	assertTrue(t, errors.As(subject, &extractErr))
+	assertEqual(t, customErr, extractErr)
+
+	// test Format
+	expectedFmtOutcome := `error #1
+some standard error 1
+error #2
+some standard error 2
+error #3
+dummy custom error %+v formatted
+error #4
+some standard error 3`
+	assertEqual(t, expectedFmtOutcome, fmt.Sprintf("%+v", subject))
+}
+
+func TestMultiError_initializedLater(t *testing.T) {
+	t.Parallel()
+
+	// arrange
+	var (
+		subject    *xerr.MultiError
+		customErr  = dummyCustomErr{}
+		extractErr dummyCustomErr
+		stdErr1    = errors.New("some standard error 1")
+		stdErr2    = errors.New("some standard error 2")
+		stdErr3    = errors.New("some standard error 3")
+	)
+
+	// act & assert
+	// test initial state
+	assertNil(t, subject.ErrOrNil())
+	assertNil(t, subject.Errors())
+	assertEqual(t, "", subject.Error())
+	assertEqual(t, "", fmt.Sprintf("%+v", subject))
+	assertFalse(t, errors.Is(subject, stdErr3))
+	assertFalse(t, errors.As(subject, &extractErr))
+
+	// add an error
+	subject = subject.AddOnce(stdErr1)
+	assertNotNil(t, subject.ErrOrNil())
+	assertEqual(t, stdErr1.Error(), subject.Error())
+	errs := subject.Errors()
+	assertEqual(t, []error{stdErr1}, errs)
+
+	// add nil
+	subject = subject.Add(nil)
+	assertNotNil(t, subject.ErrOrNil())
+	assertEqual(t, stdErr1.Error(), subject.Error())
+	assertEqual(t, []error{stdErr1}, subject.Errors())
+
+	// add another error
+	subject = subject.Add(stdErr2)
+	assertNotNil(t, subject.ErrOrNil())
+	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error(), subject.Error())
+	assertEqual(t, 1, len(errs)) // see we got a copy the first time
+	assertEqual(t, []error{stdErr1, stdErr2}, subject.Errors())
+
+	// add unique an already existing error
+	subject = subject.AddOnce(stdErr1)
+	assertNotNil(t, subject.ErrOrNil())
+	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error(), subject.Error())
+	assertEqual(t, []error{stdErr1, stdErr2}, subject.Errors())
+
+	// add unique a new error
+	subject = subject.AddOnce(customErr)
+	assertNotNil(t, subject.ErrOrNil())
+	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error(), subject.Error())
+	assertEqual(t, []error{stdErr1, stdErr2, customErr}, subject.Errors())
+
+	// add unique a nil error and a new one
+	subject = subject.AddOnce(customErr, nil, stdErr3)
+	assertNotNil(t, subject.ErrOrNil())
+	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error()+"\n"+stdErr3.Error(), subject.Error())
+	assertEqual(t, []error{stdErr1, stdErr2, customErr, stdErr3}, subject.Errors())
+
+	// test Is/As/Unwrap
+	assertTrue(t, errors.Is(subject, subject))
+	assertTrue(t, errors.Is(subject, stdErr1))
+	assertTrue(t, errors.Is(subject, stdErr2))
+	assertTrue(t, errors.Is(subject, stdErr3))
+	assertFalse(t, errors.Is(subject, nil))
+	assertFalse(t, errors.Is(subject, errors.New("a different error")))
+
 	assertTrue(t, errors.As(subject, &extractErr))
 	assertEqual(t, customErr, extractErr)
 
@@ -125,8 +212,8 @@ func TestMultiError_concurrency(t *testing.T) {
 
 			err := errors.New("err from threadNo " + strconv.FormatInt(int64(threadNo+1), 10))
 			// perform all kind of ops upon subject that can trigger race conditions when running t with -race
-			mErr.Add(err)
-			mErr.AddOnce(err)
+			_ = mErr.Add(err)
+			_ = mErr.AddOnce(err)
 			_ = mErr.Errors()
 			_ = mErr.Error()
 			assertNotNil(t, mErr.ErrOrNil())
@@ -149,4 +236,38 @@ func TestMultiError_concurrency(t *testing.T) {
 		}
 	}
 	assertEqual(t, goroutinesNo*(goroutinesNo+1)/2, sum)
+}
+
+func BenchmarkMultiError_concurrentSafe(b *testing.B) {
+	var (
+		err  = errors.New("some error to be Added to MultiError")
+		mErr = xerr.NewMultiError()
+	)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = mErr.Add(err)
+			_ = mErr.AddOnce(err)
+			_ = mErr.Errors()
+			_ = mErr.Error()
+			_ = mErr.ErrOrNil()
+			_ = errors.Is(mErr, err)
+		}
+	})
+}
+
+func BenchmarkMultiError_notConcurrentSafe(b *testing.B) {
+	var (
+		err  = errors.New("some error to be Added to MultiError")
+		mErr *xerr.MultiError
+	)
+
+	for n := 0; n < b.N; n++ {
+		mErr = mErr.Add(err)
+		mErr = mErr.AddOnce(err)
+		_ = mErr.Errors()
+		_ = mErr.Error()
+		_ = mErr.ErrOrNil()
+		_ = errors.Is(mErr, err)
+	}
 }

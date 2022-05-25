@@ -115,17 +115,17 @@ main.main
 
 ### MultiError
 You can collect multiple errors into a `MultiError` which implements `error` interface.
-Basic example:
+Basic sequential example:
 ```golang
 files := []string{
     "/this/file/does/not/exist/1",
     "/this/file/does/not/exist/2",
     "/this/file/does/not/exist/3",
 }
-multiErr := xerr.NewMultiError()
+var multiErr *xerr.MultiError // save allocation if Add is never called.
 for _, file := range files {
     if _, err := os.Open(file); err != nil {
-        multiErr.Add(err)
+        multiErr = multiErr.Add(err) // store allocated multiErr.
     }
     // else do something with that file ...
 }
@@ -144,11 +144,44 @@ error #3
 open /this/file/does/not/exist/3: no such file or directory
 ```
 
+Basic parallel example:
+```golang
+files := []string{
+	"/this/file/does/not/exist/1",
+	"/this/file/does/not/exist/2",
+	"/this/file/does/not/exist/3",
+}
+multiErr := xerr.NewMultiError() // we need instance already initialized.
+var wg sync.WaitGroup
+for _, file := range files {
+	wg.Add(1)
+	go func(filePath string, mErr *xerr.MultiError, waitGr *sync.WaitGroup) {
+		defer waitGr.Done()
+		if _, err := os.Open(filePath); err != nil {
+			_ = mErr.Add(err) // we can dismiss returned value as multiErr is already initialized.
+		}
+		// else do something with that file ...
+	}(file, multiErr, &wg)
+}
+wg.Wait()
+
+returnErr := multiErr.ErrOrNil()
+fmt.Println(returnErr)
+```
+Output example:
+```
+error #1
+open /this/file/does/not/exist/3: no such file or directory
+error #2
+open /this/file/does/not/exist/1: no such file or directory
+error #3
+open /this/file/does/not/exist/2: no such file or directory
+```    
 
 ### Misc 
 Feel free to use this pkg if you like it and fits your needs.  
 Check also other stack aware errors packages like pkg\errors, go-errors\errors.  
-For multi-error there is hashicorp\go-multierror.  
+For multi-error there are hashicorp\go-multierror, uber-go\multierr.
 Here stands some benchmarks made locally for stacked error (note though each package err output may be different):  
 ```
 goos: darwin

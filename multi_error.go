@@ -15,13 +15,19 @@ import (
 )
 
 // MultiError holds a pool of errors.
-// Its APIs are concurrent safe.
+// Its APIs are concurrent safe if you initialize it
+// with NewMultiError().
 type MultiError struct {
 	errors []error
 	mu     *sync.RWMutex
 }
 
 // NewMultiError instantiates a new MultiError object.
+// Use it to initialize from start your MultiError variable
+// if you use it in a concurrent context, or you need to pass it
+// as parameter to a function. Otherwise just declare the variable's type
+// and get effective instance returned by Add() / AddOnce() APIs,
+// to avoid unnecessary allocation if those APIs end up never being called.
 func NewMultiError() *MultiError {
 	return &MultiError{
 		errors: make([]error, 0),
@@ -29,12 +35,22 @@ func NewMultiError() *MultiError {
 	}
 }
 
+// newMultiError initializes internally a MultiError object, not concurrent safe.
+func newMultiError() *MultiError {
+	return &MultiError{
+		errors: make([]error, 0),
+	}
+}
+
 // Error returns the error's message.
 // Implements std error interface.
 // Returns all stored errors' messages, new line separated.
 func (mErr *MultiError) Error() string {
-	mErr.mu.RLock()
-	defer mErr.mu.RUnlock()
+	if mErr == nil {
+		return ""
+	}
+	mErr.rLock()
+	defer mErr.rUnlock()
 
 	switch len(mErr.errors) {
 	case 0:
@@ -53,34 +69,46 @@ func (mErr *MultiError) Error() string {
 }
 
 // Add appends the given error(s) in MultiError.
-func (mErr *MultiError) Add(errs ...error) {
+// It returns the MultiError, eventually initialized.
+func (mErr *MultiError) Add(errs ...error) *MultiError {
 	for _, err := range errs {
 		if err != nil {
-			mErr.mu.Lock()
+			if mErr == nil {
+				mErr = newMultiError()
+			}
+			mErr.lock()
 			mErr.errors = append(mErr.errors, err)
-			mErr.mu.Unlock()
+			mErr.unlock()
 		}
 	}
+
+	return mErr
 }
 
 // AddOnce stores the given error(s) in MultiError,
 // only if they do not exist already. Comparison is
 // accomplished with Is() API.
-func (mErr *MultiError) AddOnce(errs ...error) {
+// It returns the MultiError, eventually initialized.
+func (mErr *MultiError) AddOnce(errs ...error) *MultiError {
 	for _, err := range errs {
 		if err == nil {
 			continue
 		}
+		if mErr == nil {
+			mErr = newMultiError()
+		}
 
-		mErr.mu.Lock()
+		mErr.lock()
 		if mErr.hasError(err) {
-			mErr.mu.Unlock()
+			mErr.unlock()
 
 			continue
 		}
 		mErr.errors = append(mErr.errors, err)
-		mErr.mu.Unlock()
+		mErr.unlock()
 	}
+
+	return mErr
 }
 
 // hasError checks if an error already exists in MultiError.
@@ -97,33 +125,46 @@ func (mErr *MultiError) hasError(err error) bool {
 
 // Errors returns a copy of stored errors.
 func (mErr *MultiError) Errors() []error {
-	mErr.mu.RLock()
+	if mErr == nil {
+		return nil
+	}
+	mErr.rLock()
 	errors := make([]error, len(mErr.errors))
 	copy(errors, mErr.errors)
-	mErr.mu.RUnlock()
+	mErr.rUnlock()
 
 	return errors
 }
 
-// ErrOrNil returns MultiError as error, or nil if it does not have
-// any stored errors.
+// ErrOrNil returns nil if MultiError does not have any stored errors,
+// or the single error it stores,
+// or self if has more more than 1 error.
 func (mErr *MultiError) ErrOrNil() error {
-	mErr.mu.RLock()
-	defer mErr.mu.RUnlock()
-
-	if len(mErr.errors) == 0 {
+	if mErr == nil {
 		return nil
 	}
+	mErr.rLock()
+	defer mErr.rUnlock()
 
-	return mErr
+	switch len(mErr.errors) {
+	case 0:
+		return nil
+	case 1:
+		return mErr.errors[0]
+	default:
+		return mErr
+	}
 }
 
 // Format implements fmt.Formatter.
 // It relies upon individual error's Format() API if applicable,
 // otherwise Error() 's outcome is taken into account.
 func (mErr *MultiError) Format(f fmt.State, verb rune) {
-	mErr.mu.RLock()
-	defer mErr.mu.RUnlock()
+	if mErr == nil {
+		return
+	}
+	mErr.rLock()
+	defer mErr.rUnlock()
 
 	errorsLen := len(mErr.errors)
 	if errorsLen == 0 {
@@ -151,15 +192,23 @@ func (mErr *MultiError) Format(f fmt.State, verb rune) {
 // It implements standard error Is()/As() APIs.
 // Returns recursively first error from stored errors.
 func (mErr *MultiError) Unwrap() error {
-	mErr.mu.RLock()
-	defer mErr.mu.RUnlock()
+	if mErr == nil {
+		return nil
+	}
+	mErr.rLock()
+	defer mErr.rUnlock()
 
 	if len(mErr.errors) <= 1 {
 		return nil
 	}
 
-	newMultiErr := NewMultiError()
-	newMultiErr.Add(mErr.errors[1:]...)
+	var newMultiErr *MultiError
+	if mErr.mu != nil {
+		newMultiErr = NewMultiError()
+	} else {
+		newMultiErr = newMultiError()
+	}
+	_ = newMultiErr.Add(mErr.errors[1:]...)
 
 	return newMultiErr
 }
@@ -167,17 +216,55 @@ func (mErr *MultiError) Unwrap() error {
 // As implements standard error As() API,
 // comparing the first error from stored ones.
 func (mErr *MultiError) As(target interface{}) bool {
-	mErr.mu.RLock()
-	defer mErr.mu.RUnlock()
+	if mErr == nil {
+		return false
+	}
+	mErr.rLock()
+	defer mErr.rUnlock()
 
-	return errors.As(mErr.errors[0], target)
+	if len(mErr.errors) > 0 {
+		return errors.As(mErr.errors[0], target)
+	}
+
+	return false
 }
 
 // Is implements standard error Is() API,
 // comparing the first error from stored ones.
 func (mErr *MultiError) Is(target error) bool {
-	mErr.mu.RLock()
-	defer mErr.mu.RUnlock()
+	if mErr == nil {
+		return mErr == target
+	}
+	mErr.rLock()
+	defer mErr.rUnlock()
 
-	return errors.Is(mErr.errors[0], target)
+	if len(mErr.errors) > 0 {
+		return errors.Is(mErr.errors[0], target)
+	}
+
+	return false
+}
+
+func (mErr *MultiError) lock() {
+	if mErr.mu != nil {
+		mErr.mu.Lock()
+	}
+}
+
+func (mErr *MultiError) unlock() {
+	if mErr.mu != nil {
+		mErr.mu.Unlock()
+	}
+}
+
+func (mErr *MultiError) rLock() {
+	if mErr.mu != nil {
+		mErr.mu.RLock()
+	}
+}
+
+func (mErr *MultiError) rUnlock() {
+	if mErr.mu != nil {
+		mErr.mu.RUnlock()
+	}
 }
