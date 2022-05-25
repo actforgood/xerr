@@ -203,10 +203,10 @@ func ExampleMultiError_AddOnce() {
 	err2 := io.ErrUnexpectedEOF
 	err3 := os.ErrNotExist
 
-	var multiErr = xerr.NewMultiError()
-	_ = multiErr.AddOnce(err1)
-	_ = multiErr.AddOnce(err2)
-	_ = multiErr.AddOnce(err3) // err3 is the same with err1, so it should be ignored
+	var multiErr *xerr.MultiError
+	multiErr = multiErr.AddOnce(err1)
+	multiErr = multiErr.AddOnce(err2)
+	multiErr = multiErr.AddOnce(err3) // err3 is the same with err1, so it should be ignored
 
 	returnErr := multiErr.ErrOrNil()
 	fmt.Println(returnErr)

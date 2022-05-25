@@ -124,7 +124,7 @@ func TestMultiError_initializedLater(t *testing.T) {
 	assertFalse(t, errors.As(subject, &extractErr))
 
 	// add an error
-	subject = subject.AddOnce(stdErr1)
+	subject = subject.Add(stdErr1)
 	assertNotNil(t, subject.ErrOrNil())
 	assertEqual(t, stdErr1.Error(), subject.Error())
 	errs := subject.Errors()
