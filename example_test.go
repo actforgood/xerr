@@ -156,7 +156,7 @@ func ExampleMultiError_Add_sequential() {
 	returnErr := multiErr.ErrOrNil()
 	fmt.Println(returnErr)
 
-	// Output:
+	// Example of output: note - on Windows the message is slightly different (The system cannot find the path specified)
 	// error #1
 	// open /this/file/does/not/exist/1: no such file or directory
 	// error #2

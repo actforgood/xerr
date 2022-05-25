@@ -114,7 +114,7 @@ main.main
 
 
 ### MultiError
-You can collect multiple errors into a `MultiError` which implements `error` interface.
+You can collect multiple errors into a `MultiError` which implements `error` interface.  
 Basic sequential example:
 ```golang
 files := []string{
@@ -181,7 +181,7 @@ open /this/file/does/not/exist/2: no such file or directory
 ### Misc 
 Feel free to use this pkg if you like it and fits your needs.  
 Check also other stack aware errors packages like pkg\errors, go-errors\errors.  
-For multi-error there are hashicorp\go-multierror, uber-go\multierr.
+For multi-error there are hashicorp\go-multierror, uber-go\multierr.  
 Here stands some benchmarks made locally for stacked error (note though each package err output may be different):  
 ```
 goos: darwin
