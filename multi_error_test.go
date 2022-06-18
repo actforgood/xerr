@@ -215,6 +215,25 @@ func TestMultiError_Reset(t *testing.T) {
 	assertEqual(t, 0, len(subject.Errors()))
 }
 
+func TestMultiError_Unwrap_Is(t *testing.T) {
+	t.Parallel()
+
+	// arrange & act & assert
+	var subject = xerr.NewMultiError()
+	assertTrue(t, errors.Is(subject, subject))
+
+	// arrange & act & assert
+	subject.Add(io.ErrUnexpectedEOF)
+	assertTrue(t, errors.Is(subject, subject))
+	assertTrue(t, errors.Is(subject, io.ErrUnexpectedEOF))
+
+	// arrange & act & assert
+	subject.Add(io.ErrShortWrite)
+	assertTrue(t, errors.Is(subject, subject))
+	assertTrue(t, errors.Is(subject, io.ErrUnexpectedEOF))
+	assertTrue(t, errors.Is(subject, io.ErrShortWrite))
+}
+
 func TestMultiError_concurrency(t *testing.T) {
 	t.Parallel()
 
@@ -291,5 +310,17 @@ func BenchmarkMultiError_notConcurrentSafe(b *testing.B) {
 		_ = mErr.Error()
 		_ = mErr.ErrOrNil()
 		_ = errors.Is(mErr, err)
+	}
+}
+
+func BenchmarkMultiError_Reset(b *testing.B) {
+	var (
+		err  = errors.New("some error to be Added to MultiError")
+		mErr = xerr.NewMultiError()
+	)
+
+	for n := 0; n < b.N; n++ {
+		_ = mErr.Add(err)
+		mErr.Reset()
 	}
 }

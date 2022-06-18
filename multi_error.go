@@ -144,7 +144,11 @@ func (mErr *MultiError) Reset() {
 
 	mErr.lock()
 	if len(mErr.errors) > 0 {
-		mErr.errors = make([]error, 0)
+		// keep the allocated memory
+		for idx := range mErr.errors {
+			mErr.errors[idx] = nil
+		}
+		mErr.errors = mErr.errors[:0]
 	}
 	mErr.unlock()
 }
@@ -211,8 +215,10 @@ func (mErr *MultiError) Unwrap() error {
 	mErr.rLock()
 	defer mErr.rUnlock()
 
-	if len(mErr.errors) <= 1 {
+	if len(mErr.errors) == 0 {
 		return nil
+	} else if len(mErr.errors) == 1 {
+		return mErr.errors[0]
 	}
 
 	var newMultiErr *MultiError
