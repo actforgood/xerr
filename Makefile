@@ -25,7 +25,7 @@ setup: ## Download dependencies.
 
 .PHONY: test
 test: ## Run tests (with race condition detection).
-	go test --race ./...
+	go test -race ./...
 
 .PHONY: bench
 bench: ## Run benchmarks.

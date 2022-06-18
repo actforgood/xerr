@@ -136,6 +136,19 @@ func (mErr *MultiError) Errors() []error {
 	return errors
 }
 
+// Reset cleans up stored errors, if any.
+func (mErr *MultiError) Reset() {
+	if mErr == nil {
+		return
+	}
+
+	mErr.lock()
+	if len(mErr.errors) > 0 {
+		mErr.errors = make([]error, 0)
+	}
+	mErr.unlock()
+}
+
 // ErrOrNil returns nil if MultiError does not have any stored errors,
 // or the single error it stores,
 // or self if has more more than 1 error.

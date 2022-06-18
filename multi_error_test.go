@@ -193,6 +193,28 @@ func (dumErr dummyCustomErr) Format(f fmt.State, verb rune) {
 	}
 }
 
+func TestMultiError_Reset(t *testing.T) {
+	t.Parallel()
+
+	// act & assert - subject not initialized
+	var subject *xerr.MultiError
+	subject.Reset()
+	assertNil(t, subject.Errors())
+
+	// act & assert - subject is initialized, has no errors
+	subject = xerr.NewMultiError()
+	subject.Reset()
+	assertNotNil(t, subject.Errors())
+	assertEqual(t, 0, len(subject.Errors()))
+
+	// act & assert - subject with errors
+	subject.AddOnce(io.ErrUnexpectedEOF)
+	assertEqual(t, 1, len(subject.Errors()))
+	subject.Reset()
+	assertNotNil(t, subject.Errors())
+	assertEqual(t, 0, len(subject.Errors()))
+}
+
 func TestMultiError_concurrency(t *testing.T) {
 	t.Parallel()
 
