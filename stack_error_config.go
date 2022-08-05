@@ -21,11 +21,10 @@ var (
 // You will call it usually somewhere in the bootstrap process of your
 // application. For example:
 //
-// 		// myapp/bootstrap.go
-// 		func init() {
-// 			xerr.SetSkipFrame(SkipFoo(SkipBar(xerr.AllowFrame)))
-// 		}
-//
+//	// myapp/bootstrap.go
+//	func init() {
+//		xerr.SetSkipFrame(SkipFoo(SkipBar(xerr.AllowFrame)))
+//	}
 func SetSkipFrame(fn SkipFrame) {
 	skipFrame = fn
 }
@@ -60,8 +59,7 @@ func SkipFrameGoRootSrcPath(next SkipFrame) SkipFrame {
 //
 // Example:
 //
-// 		xerr.SetSkipFrame(SkipFoo(SkipBar(xerr.AllowFrame)))
-//
+//	xerr.SetSkipFrame(SkipFoo(SkipBar(xerr.AllowFrame)))
 func AllowFrame(_, _ string) bool {
 	return false
 }
@@ -110,11 +108,10 @@ func NoDomainFunctionName(fnName string) string {
 // You will call it usually somewhere in the bootstrap process of your
 // application. For example:
 //
-// 		// myapp/bootstrap.go
-// 		func init() {
-// 			xerr.SetFrameFnNameProcessor(xerr.ShortFunctionName)
-// 		}
-//
+//	// myapp/bootstrap.go
+//	func init() {
+//		xerr.SetFrameFnNameProcessor(xerr.ShortFunctionName)
+//	}
 func SetFrameFnNameProcessor(fn FrameFnNameProcessor) {
 	frameFnNameProcessor = fn
 }

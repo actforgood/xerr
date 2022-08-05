@@ -46,11 +46,11 @@ func (err stackError) Error() string {
 // Format implements fmt.Formatter.
 // The following verbs are supported:
 //
-//     %s    print the error. If the error has an original error, it will be
-//           printed recursively.
-//     %v    same behaviour as %s.
-//     %+v   extended format. Each frame of the error's call stack will
-//           be printed in detail.
+//	%s    print the error. If the error has an original error, it will be
+//	      printed recursively.
+//	%v    same behaviour as %s.
+//	%+v   extended format. Each frame of the error's call stack will
+//	      be printed in detail.
 func (err stackError) Format(f fmt.State, verb rune) {
 	switch verb {
 	case 'v':
@@ -171,13 +171,13 @@ func getCallStack(maxDepth int) []uintptr {
 //
 // The format in which is written is:
 //
-// <functionName>
-//      <file>:<line>
+//	<functionName>
+//	  <file>:<line>
 //
 // Example:
-// github.com/actforgood/xerr_test.TestX
-//      /Users/bogdan/work/go/xerr/errors_test.go:68
 //
+//	github.com/actforgood/xerr_test.TestX
+//	  /Users/bogdan/work/go/xerr/errors_test.go:68
 func writeFrame(w io.Writer, fnName string, file string, line int) {
 	_, _ = io.WriteString(w, "\n")
 	if frameFnNameProcessor != nil {
