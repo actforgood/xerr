@@ -24,7 +24,7 @@ $ go get -u github.com/actforgood/xerr
 
 ### Error with stack trace
 Basic example:  
-```golang
+```go
 // create a new error with stack trace and print it.
 err := xerr.New("something went bad")
 fmt.Printf("%+v", err)
@@ -123,7 +123,7 @@ main.main
 ### MultiError
 You can collect multiple errors into a `MultiError` which implements `error` interface.  
 Basic sequential example:
-```golang
+```go
 files := []string{
     "/this/file/does/not/exist/1",
     "/this/file/does/not/exist/2",
@@ -152,7 +152,7 @@ open /this/file/does/not/exist/3: no such file or directory
 ```
 
 Basic parallel example:
-```golang
+```go
 files := []string{
 	"/this/file/does/not/exist/1",
 	"/this/file/does/not/exist/2",
@@ -199,7 +199,7 @@ BenchmarkNewPkgErrors-8          1409167              4396 ns/op             680
 BenchmarkNewGoErrors-8           48172              126978 ns/op           21255 B/op         71 allocs/op
 BenchmarkNewXerr-8               2409250              2495 ns/op             656 B/op          7 allocs/op
 ```
-```golang
+```go
 // code snippet for other packages bench
 import (
     "fmt"
