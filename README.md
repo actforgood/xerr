@@ -10,6 +10,13 @@
 Package `xerr` provides an error with stack trace, a multi-error and other different types of errors.  
 
 
+### Installation
+
+```shell
+$ go get -u github.com/actforgood/xerr
+```
+
+
 ### Features:
 * an error enriched with stack trace
 * a MultiError
