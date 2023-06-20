@@ -33,7 +33,7 @@ func SetSkipFrame(fn SkipFrame) {
 // a frame should be included in the stack trace or not.
 type SkipFrame func(fnName, file string) bool
 
-// SkipFrameChain is a alias for a chained SkipFrame.
+// SkipFrameChain is a alias for a chained [SkipFrame].
 type SkipFrameChain func(next SkipFrame) SkipFrame
 
 // SkipFrameGoRootSrcPath is a chained function which blacklists
@@ -53,8 +53,8 @@ func SkipFrameGoRootSrcPath(next SkipFrame) SkipFrame {
 	}
 }
 
-// AllowFrame is a SkipFrame which whitelists any given frame.
-// It can be used as the default/first SkipFrame in a chained
+// AllowFrame is a [SkipFrame] which whitelists any given frame.
+// It can be used as the default/first [SkipFrame] in a chained
 // responsibility configuration.
 //
 // Example:
@@ -69,9 +69,9 @@ func AllowFrame(_, _ string) bool {
 // You can apply customizations upon function name output this way.
 type FrameFnNameProcessor func(fnName string) string
 
-// ShortFunctionName is a FrameFnNameProcessor which returns only the
+// ShortFunctionName is a [FrameFnNameProcessor] which returns only the
 // <package.funcName>, removing the fully qualified package name parts.
-// Example:  "github.com/actforgood/xerr_test.TestX" => "xerr_test.TestX" .
+// Example: "github.com/actforgood/xerr_test.TestX" => "xerr_test.TestX" .
 func ShortFunctionName(fnName string) string {
 	if lastSlashPos := strings.LastIndex(fnName, "/"); lastSlashPos >= 0 {
 		fnName = fnName[lastSlashPos+1:]
@@ -80,9 +80,9 @@ func ShortFunctionName(fnName string) string {
 	return fnName
 }
 
-// OnlyFunctionName is a FrameFnNameProcessor which returns only the function
+// OnlyFunctionName is a [FrameFnNameProcessor] which returns only the function
 // name, removing the package part.
-// Example:  "github.com/actforgood/xerr_test.TestX" => "TestX" .
+// Example: "github.com/actforgood/xerr_test.TestX" => "TestX" .
 func OnlyFunctionName(fnName string) string {
 	fnName = ShortFunctionName(fnName)
 	if firstDotPos := strings.Index(fnName, "."); firstDotPos >= 0 {
@@ -92,7 +92,7 @@ func OnlyFunctionName(fnName string) string {
 	return fnName
 }
 
-// NoDomainFunctionName is a FrameFnNameProcessor which removes the first
+// NoDomainFunctionName is a [FrameFnNameProcessor] which removes the first
 // part (which is usually a domain) from fully qualified package name.
 // Example: "github.com/actforgood/xerr_test.TestX" => "actforgood/xerr_test.TestX" .
 func NoDomainFunctionName(fnName string) string {

@@ -16,7 +16,7 @@ import (
 
 // MultiError holds a pool of errors.
 // Its APIs are concurrent safe if you initialize it
-// with NewMultiError().
+// with [NewMultiError].
 type MultiError struct {
 	errors []error
 	mu     *sync.RWMutex
@@ -26,7 +26,7 @@ type MultiError struct {
 // Use it to initialize from start your MultiError variable
 // if you use it in a concurrent context, or you need to pass it
 // as parameter to a function. Otherwise just declare the variable's type
-// and get effective instance returned by Add() / AddOnce() APIs,
+// and get effective instance returned by [MultiError.Add] / [MultiError.AddOnce] APIs,
 // to avoid unnecessary allocation if those APIs end up never being called.
 func NewMultiError() *MultiError {
 	return &MultiError{
@@ -87,7 +87,7 @@ func (mErr *MultiError) Add(errs ...error) *MultiError {
 
 // AddOnce stores the given error(s) in MultiError,
 // only if they do not exist already. Comparison is
-// accomplished with Is() API.
+// accomplished with [errors.Is] API.
 // It returns the MultiError, eventually initialized.
 func (mErr *MultiError) AddOnce(errs ...error) *MultiError {
 	for _, err := range errs {
@@ -112,7 +112,7 @@ func (mErr *MultiError) AddOnce(errs ...error) *MultiError {
 }
 
 // hasError checks if an error already exists in MultiError.
-// Comparison is done with Is() API.
+// Comparison is done with [errors.Is] API.
 func (mErr *MultiError) hasError(err error) bool {
 	for _, storedErr := range mErr.errors {
 		if errors.Is(storedErr, err) {
@@ -173,7 +173,7 @@ func (mErr *MultiError) ErrOrNil() error {
 	}
 }
 
-// Format implements fmt.Formatter.
+// Format implements [fmt.Formatter].
 // It relies upon individual error's Format() API if applicable,
 // otherwise Error() 's outcome is taken into account.
 func (mErr *MultiError) Format(f fmt.State, verb rune) {
@@ -206,7 +206,7 @@ func (mErr *MultiError) Format(f fmt.State, verb rune) {
 }
 
 // Unwrap returns original error (can be nil).
-// It implements standard error Is()/As() APIs.
+// It implements standard [errors.Is] / [errors.As] APIs.
 // Returns recursively first error from stored errors.
 func (mErr *MultiError) Unwrap() error {
 	if mErr == nil {
@@ -232,7 +232,7 @@ func (mErr *MultiError) Unwrap() error {
 	return newMultiErr
 }
 
-// As implements standard error As() API,
+// As implements standard [errors.As] API,
 // comparing the first error from stored ones.
 func (mErr *MultiError) As(target interface{}) bool {
 	if mErr == nil {
@@ -248,7 +248,7 @@ func (mErr *MultiError) As(target interface{}) bool {
 	return false
 }
 
-// Is implements standard error Is() API,
+// Is implements standard [errors.Is] API,
 // comparing the first error from stored ones.
 func (mErr *MultiError) Is(target error) bool {
 	if mErr == nil {

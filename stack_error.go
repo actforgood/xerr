@@ -43,7 +43,7 @@ func (err stackError) Error() string {
 	return message
 }
 
-// Format implements fmt.Formatter.
+// Format implements [fmt.Formatter].
 // The following verbs are supported:
 //
 //	%s    print the error. If the error has an original error, it will be
@@ -85,7 +85,7 @@ func (err stackError) writeMsg(w io.Writer) {
 }
 
 // Unwrap returns original error (can be nil).
-// It implements standard error Is()/As() APIs.
+// It implements [errors.Is] / [errors.As] APIs.
 func (err stackError) Unwrap() error {
 	return err.origErr
 }
@@ -134,9 +134,9 @@ func Wrap(err error, msg string) error {
 }
 
 // Wrapf returns an error annotating err with a stack trace
-// at the point Wrap is called, and the message formatted according to a
+// at the point Wrapf is called, and the message formatted according to a
 // format specifier.
-// If err is nil, Wrap returns nil.
+// If err is nil, Wrapf returns nil.
 // If err is another stack trace aware error, the final stack trace will
 // consists of original error's stack trace + 1 trace of current Wrapf call.
 func Wrapf(err error, format string, args ...interface{}) error {
