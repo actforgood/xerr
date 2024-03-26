@@ -366,7 +366,7 @@ func TestNew_withGlobalConfigurationChanged(t *testing.T) {
 		skipFrameCallsCnt            = 0
 		frameFnNameProcessorCallsCnt = 0
 	)
-	xerr.SetSkipFrame(func(fnName, file string) bool {
+	xerr.SetSkipFrame(func(fnName, _ string) bool {
 		skipFrameCallsCnt++
 
 		return !strings.HasPrefix(fnName, "github.com/actforgood")
