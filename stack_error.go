@@ -72,6 +72,12 @@ func (err stackError) Format(f fmt.State, verb rune) {
 	}
 }
 
+// Unwrap returns original error (can be nil).
+// It implements [errors.Is] / [errors.As] APIs.
+func (err stackError) Unwrap() error {
+	return err.origErr
+}
+
 // writeMsg writes the error message.
 // Used this instead of directly io.WriteString(w, err.Error()) to save some extra memory allocation.
 func (err stackError) writeMsg(w io.Writer) {
@@ -82,12 +88,6 @@ func (err stackError) writeMsg(w io.Writer) {
 		}
 		_, _ = io.WriteString(w, err.origErr.Error())
 	}
-}
-
-// Unwrap returns original error (can be nil).
-// It implements [errors.Is] / [errors.As] APIs.
-func (err stackError) Unwrap() error {
-	return err.origErr
 }
 
 // New returns an error with the supplied message.
@@ -102,7 +102,7 @@ func New(msg string) error {
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error.
 // Errorf also records the stack trace at the point it was called.
-func Errorf(format string, args ...interface{}) error {
+func Errorf(format string, args ...any) error {
 	return &stackError{
 		msg:      fmt.Sprintf(format, args...),
 		stackPCs: getCallStack(maxStackFrames),
@@ -139,7 +139,7 @@ func Wrap(err error, msg string) error {
 // If err is nil, Wrapf returns nil.
 // If err is another stack trace aware error, the final stack trace will
 // consists of original error's stack trace + 1 trace of current Wrapf call.
-func Wrapf(err error, format string, args ...interface{}) error {
+func Wrapf(err error, format string, args ...any) error {
 	if err == nil {
 		return nil
 	}
@@ -178,7 +178,7 @@ func getCallStack(maxDepth int) []uintptr {
 //
 //	github.com/actforgood/xerr_test.TestX
 //	  /Users/bogdan/work/go/xerr/errors_test.go:68
-func writeFrame(w io.Writer, fnName string, file string, line int) {
+func writeFrame(w io.Writer, fnName, file string, line int) {
 	_, _ = io.WriteString(w, "\n")
 	if frameFnNameProcessor != nil {
 		_, _ = io.WriteString(w, frameFnNameProcessor(fnName))
@@ -192,7 +192,7 @@ func writeFrame(w io.Writer, fnName string, file string, line int) {
 }
 
 // getFrame returns function, file and line for a program counter.
-func getFrame(pc uintptr) (fnName string, file string, line int) {
+func getFrame(pc uintptr) (fnName, file string, line int) {
 	fn := runtime.FuncForPC(pc)
 	if fn != nil {
 		fnName = fn.Name()

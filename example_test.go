@@ -219,7 +219,7 @@ func ExampleMultiError_AddOnce() {
 }
 
 func ExampleMultiError_Errors() {
-	var multiErr = xerr.NewMultiError()
+	multiErr := xerr.NewMultiError()
 	_ = multiErr.Add(errors.New("1st error"))
 	_ = multiErr.Add(errors.New("2nd error"))
 
@@ -233,7 +233,7 @@ func ExampleMultiError_Errors() {
 }
 
 func ExampleMultiError_Is() {
-	var multiErr = xerr.NewMultiError()
+	multiErr := xerr.NewMultiError()
 	_ = multiErr.Add(io.ErrUnexpectedEOF)
 	someErrWithStack := xerr.New("stack err")
 	_ = multiErr.Add(someErrWithStack)

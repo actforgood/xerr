@@ -23,8 +23,8 @@ func TestMultiError_initializedFromStart(t *testing.T) {
 	// arrange
 	var (
 		subject    = xerr.NewMultiError()
-		customErr  = dummyCustomErr{}
-		extractErr dummyCustomErr
+		customErr  = dummyCustomError{}
+		extractErr dummyCustomError
 		stdErr1    = errors.New("some standard error 1")
 		stdErr2    = errors.New("some standard error 2")
 		stdErr3    = errors.New("some standard error 3")
@@ -75,7 +75,11 @@ func TestMultiError_initializedFromStart(t *testing.T) {
 	// add unique a nil error and a new one
 	subject = subject.AddOnce(customErr, nil, stdErr3)
 	assertNotNil(t, subject.ErrOrNil())
-	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error()+"\n"+stdErr3.Error(), subject.Error())
+	assertEqual(
+		t,
+		stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error()+"\n"+stdErr3.Error(),
+		subject.Error(),
+	)
 	assertEqual(t, []error{stdErr1, stdErr2, customErr, stdErr3}, subject.Errors())
 
 	// test Is/As/Unwrap
@@ -107,8 +111,8 @@ func TestMultiError_initializedLater(t *testing.T) {
 	// arrange
 	var (
 		subject    *xerr.MultiError
-		customErr  = dummyCustomErr{}
-		extractErr dummyCustomErr
+		customErr  = dummyCustomError{}
+		extractErr dummyCustomError
 		stdErr1    = errors.New("some standard error 1")
 		stdErr2    = errors.New("some standard error 2")
 		stdErr3    = errors.New("some standard error 3")
@@ -158,7 +162,11 @@ func TestMultiError_initializedLater(t *testing.T) {
 	// add unique a nil error and a new one
 	subject = subject.AddOnce(customErr, nil, stdErr3)
 	assertNotNil(t, subject.ErrOrNil())
-	assertEqual(t, stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error()+"\n"+stdErr3.Error(), subject.Error())
+	assertEqual(
+		t,
+		stdErr1.Error()+"\n"+stdErr2.Error()+"\n"+customErr.Error()+"\n"+stdErr3.Error(),
+		subject.Error(),
+	)
 	assertEqual(t, []error{stdErr1, stdErr2, customErr, stdErr3}, subject.Errors())
 
 	// test Is/As/Unwrap
@@ -184,10 +192,10 @@ some standard error 3`
 	assertEqual(t, expectedFmtOutcome, fmt.Sprintf("%+v", subject))
 }
 
-type dummyCustomErr struct{}
+type dummyCustomError struct{}
 
-func (dummyCustomErr) Error() string { return "dummy custom error" }
-func (dumErr dummyCustomErr) Format(f fmt.State, verb rune) {
+func (dummyCustomError) Error() string { return "dummy custom error" }
+func (dumErr dummyCustomError) Format(f fmt.State, verb rune) {
 	if verb == 'v' && f.Flag('+') {
 		_, _ = io.WriteString(f, dumErr.Error()+" %+v formatted")
 	}
@@ -208,7 +216,7 @@ func TestMultiError_Reset(t *testing.T) {
 	assertEqual(t, 0, len(subject.Errors()))
 
 	// act & assert - subject with errors
-	subject.AddOnce(io.ErrUnexpectedEOF)
+	_ = subject.AddOnce(io.ErrUnexpectedEOF)
 	assertEqual(t, 1, len(subject.Errors()))
 	subject.Reset()
 	assertNotNil(t, subject.Errors())
@@ -219,16 +227,16 @@ func TestMultiError_Unwrap_Is(t *testing.T) {
 	t.Parallel()
 
 	// arrange & act & assert
-	var subject = xerr.NewMultiError()
+	subject := xerr.NewMultiError()
 	assertTrue(t, errors.Is(subject, subject))
 
 	// arrange & act & assert
-	subject.Add(io.ErrUnexpectedEOF)
+	_ = subject.Add(io.ErrUnexpectedEOF)
 	assertTrue(t, errors.Is(subject, subject))
 	assertTrue(t, errors.Is(subject, io.ErrUnexpectedEOF))
 
 	// arrange & act & assert
-	subject.Add(io.ErrShortWrite)
+	_ = subject.Add(io.ErrShortWrite)
 	assertTrue(t, errors.Is(subject, subject))
 	assertTrue(t, errors.Is(subject, io.ErrUnexpectedEOF))
 	assertTrue(t, errors.Is(subject, io.ErrShortWrite))
@@ -246,7 +254,7 @@ func TestMultiError_concurrency(t *testing.T) {
 	)
 
 	// act
-	for i := 0; i < goroutinesNo; i++ {
+	for i := range goroutinesNo {
 		wg.Add(1)
 		go func(mErr *xerr.MultiError, threadNo int) {
 			defer wg.Done()
@@ -303,7 +311,7 @@ func BenchmarkMultiError_notConcurrentSafe(b *testing.B) {
 		mErr *xerr.MultiError
 	)
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		mErr = mErr.Add(err)
 		mErr = mErr.AddOnce(err)
 		_ = mErr.Errors()
@@ -319,7 +327,7 @@ func BenchmarkMultiError_Reset(b *testing.B) {
 		mErr = xerr.NewMultiError()
 	)
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		_ = mErr.Add(err)
 		mErr.Reset()
 	}

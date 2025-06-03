@@ -19,7 +19,7 @@ func TestAllowFrame(t *testing.T) {
 	// arrange
 	subject := xerr.AllowFrame
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		// act
 		result := subject("foo", "bar")
 

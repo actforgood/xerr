@@ -39,6 +39,7 @@ func NewMultiError() *MultiError {
 func newMultiError() *MultiError {
 	return &MultiError{
 		errors: make([]error, 0),
+		mu:     nil,
 	}
 }
 
@@ -111,18 +112,6 @@ func (mErr *MultiError) AddOnce(errs ...error) *MultiError {
 	return mErr
 }
 
-// hasError checks if an error already exists in MultiError.
-// Comparison is done with [errors.Is] API.
-func (mErr *MultiError) hasError(err error) bool {
-	for _, storedErr := range mErr.errors {
-		if errors.Is(storedErr, err) {
-			return true
-		}
-	}
-
-	return false
-}
-
 // Errors returns a copy of stored errors.
 func (mErr *MultiError) Errors() []error {
 	if mErr == nil {
@@ -155,7 +144,7 @@ func (mErr *MultiError) Reset() {
 
 // ErrOrNil returns nil if MultiError does not have any stored errors,
 // or the single error it stores,
-// or self if has more more than 1 error.
+// or itself if it has more than 1 error.
 func (mErr *MultiError) ErrOrNil() error {
 	if mErr == nil {
 		return nil
@@ -234,7 +223,7 @@ func (mErr *MultiError) Unwrap() error {
 
 // As implements standard [errors.As] API,
 // comparing the first error from stored ones.
-func (mErr *MultiError) As(target interface{}) bool {
+func (mErr *MultiError) As(target any) bool {
 	if mErr == nil {
 		return false
 	}
@@ -259,6 +248,18 @@ func (mErr *MultiError) Is(target error) bool {
 
 	if len(mErr.errors) > 0 {
 		return errors.Is(mErr.errors[0], target)
+	}
+
+	return false
+}
+
+// hasError checks if an error already exists in MultiError.
+// Comparison is done with [errors.Is] API.
+func (mErr *MultiError) hasError(err error) bool {
+	for _, storedErr := range mErr.errors {
+		if errors.Is(storedErr, err) {
+			return true
+		}
 	}
 
 	return false

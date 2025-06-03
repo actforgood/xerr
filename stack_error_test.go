@@ -311,8 +311,11 @@ func TestUnwrap(t *testing.T) {
 				expected:  false,
 			},
 			{
-				name:      "wrap(wrap(wrap(stackErr))), is stackErr",
-				subject:   xerr.Wrap(xerr.Wrap(xerr.Wrap(stackErr, "1st wrap"), "2nd wrap"), "3rd wrap"),
+				name: "wrap(wrap(wrap(stackErr))), is stackErr",
+				subject: xerr.Wrap(
+					xerr.Wrap(xerr.Wrap(stackErr, "1st wrap"), "2nd wrap"),
+					"3rd wrap",
+				),
 				targetErr: stackErr,
 				expected:  true,
 			},
@@ -398,7 +401,12 @@ func TestNew_withGlobalConfigurationChanged(t *testing.T) {
 		}
 		matched, _ := regexp.MatchString(`testing.tRunner\n\t.+testing.go:\d+`, errMsgWithStack)
 		if !assertFalse(t, matched) {
-			t.Log("regex", `testing.tRunner\n\t.+testing.go:\d+`, "errMsgWithStack", errMsgWithStack)
+			t.Log(
+				"regex",
+				`testing.tRunner\n\t.+testing.go:\d+`,
+				"errMsgWithStack",
+				errMsgWithStack,
+			)
 		}
 
 		assertTrue(t, skipFrameCallsCnt >= 1)
@@ -407,7 +415,7 @@ func TestNew_withGlobalConfigurationChanged(t *testing.T) {
 }
 
 func BenchmarkNew(b *testing.B) {
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		err := xerr.New("some error with stack trace")
 		_ = fmt.Sprintf("%+v", err)
 	}
@@ -416,7 +424,7 @@ func BenchmarkNew(b *testing.B) {
 func BenchmarkWrap_withStandardError(b *testing.B) {
 	origErr := errors.New("some standard error")
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		err := xerr.Wrap(origErr, "wrap")
 		_ = fmt.Sprintf("%+v", err)
 	}
@@ -425,7 +433,7 @@ func BenchmarkWrap_withStandardError(b *testing.B) {
 func BenchmarkWrap_withStackError(b *testing.B) {
 	origErr := xerr.New("some error with stack trace")
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		err := xerr.Wrap(origErr, "wrap")
 		_ = fmt.Sprintf("%+v", err)
 	}
