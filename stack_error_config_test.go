@@ -6,8 +6,6 @@
 package xerr_test
 
 import (
-	"os"
-	"runtime"
 	"testing"
 
 	"github.com/actforgood/xerr"
@@ -36,20 +34,23 @@ func TestSkipFrameGoRootSrcPath(t *testing.T) {
 		subject      = xerr.SkipFrameGoRootSrcPath
 		nextCallsCnt = 0
 		tests        = [...]struct {
-			name      string
-			inputFile string
-			next      xerr.SkipFrame
-			expected  bool
+			name        string
+			inputFnName string
+			inputFile   string
+			next        xerr.SkipFrame
+			expected    bool
 		}{
 			{
-				name:      "random path, expect false",
-				inputFile: "/foo/bar/baz.go",
-				next:      xerr.AllowFrame,
-				expected:  false,
+				name:        "random path, expect false",
+				inputFnName: "foo.Bar",
+				inputFile:   "/home/user/project/foo/bar.go",
+				next:        xerr.AllowFrame,
+				expected:    false,
 			},
 			{
-				name:      "random path, with next that skips frame, expect true",
-				inputFile: "/foo/bar/baz.go",
+				name:        "random path, with next that skips frame, expect true",
+				inputFnName: "foo.Bar",
+				inputFile:   "/home/user/project/foo/bar.go",
 				next: func(_, _ string) bool {
 					nextCallsCnt++
 
@@ -58,25 +59,26 @@ func TestSkipFrameGoRootSrcPath(t *testing.T) {
 				expected: true,
 			},
 			{
-				name:      "GOROOT/bin, expect false",
-				inputFile: runtime.GOROOT() + string(os.PathSeparator) + "bin/foo",
-				next:      xerr.AllowFrame,
-				expected:  false,
+				name:        "std lib function name, expect true",
+				inputFnName: "runtime.goexit",
+				inputFile:   "/maybe/go/root/path",
+				next:        xerr.AllowFrame,
+				expected:    true,
 			},
 			{
-				name:      "GOROOT/src, expect true",
-				inputFile: runtime.GOROOT() + string(os.PathSeparator) + "src/foo/bar.go",
-				next:      xerr.AllowFrame,
-				expected:  true,
+				name:        "std lib path name, expect true",
+				inputFnName: "http.(*ServeMux).ServeHTTP",
+				inputFile:   "/usr/local/go/src/net/http/server.go",
+				next:        xerr.AllowFrame,
+				expected:    true,
 			},
 		}
 	)
 
-	for _, testData := range tests {
-		test := testData // capture range variable
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// act
-			result := subject(test.next)("runtime.goexit", test.inputFile)
+			result := subject(test.next)(test.inputFnName, test.inputFile)
 
 			// assert
 			assertEqual(t, test.expected, result)
@@ -137,8 +139,7 @@ func TestShortFunctionName(t *testing.T) {
 		},
 	}
 
-	for _, testData := range tests {
-		test := testData // capture range variable
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// act
 			result := subject(test.inputFnName)
@@ -201,8 +202,7 @@ func TestOnlyFunctionName(t *testing.T) {
 		},
 	}
 
-	for _, testData := range tests {
-		test := testData // capture range variable
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// act
 			result := subject(test.inputFnName)
@@ -265,8 +265,7 @@ func TestNoDomainFunctionName(t *testing.T) {
 		},
 	}
 
-	for _, testData := range tests {
-		test := testData // capture range variable
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// act
 			result := subject(test.inputFnName)

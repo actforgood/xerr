@@ -6,8 +6,7 @@
 package xerr
 
 import (
-	"os"
-	"runtime"
+	"path/filepath"
 	"strings"
 )
 
@@ -37,18 +36,18 @@ type SkipFrame func(fnName, file string) bool
 type SkipFrameChain func(next SkipFrame) SkipFrame
 
 // SkipFrameGoRootSrcPath is a chained function which blacklists
-// frames with files starting with "GOROOT/src" path.
+// frames from standard library.
 func SkipFrameGoRootSrcPath(next SkipFrame) SkipFrame {
-	goSrcPath := runtime.GOROOT() + string(os.PathSeparator) + "src"
-
 	return func(fnName, file string) bool {
-		// decide whether current frame should not be included in the stack trace
-		// of an error based on if file starts with "GOROOT/src" path.
-		if strings.HasPrefix(file, goSrcPath) {
+		// Stdlib functions have no module path prefix
+		if strings.HasPrefix(fnName, "runtime.") ||
+			strings.HasPrefix(fnName, "testing.") ||
+			strings.HasPrefix(fnName, "internal/") ||
+			strings.Contains(file, string(filepath.Separator)+"go"+string(filepath.Separator)+"src"+string(filepath.Separator)) {
 			return true
 		}
 
-		// pass the responsibility to next skip frame.
+		// if it's not a stdlib frame, we check next skip frame in the chain.
 		return next(fnName, file)
 	}
 }

@@ -162,14 +162,12 @@ files := []string{
 multiErr := xerr.NewMultiError() // we need instance already initialized.
 var wg sync.WaitGroup
 for _, file := range files {
-	wg.Add(1)
-	go func(filePath string, mErr *xerr.MultiError, waitGr *sync.WaitGroup) {
-		defer waitGr.Done()
-		if _, err := os.Open(filePath); err != nil {
-			_ = mErr.Add(err) // we can dismiss returned value as multiErr is already initialized.
-		}
-		// else do something with that file ...
-	}(file, multiErr, &wg)
+    wg.Go(func() {
+        if _, err := os.Open(file); err != nil {
+            _ = multiErr.Add(err) // we can dismiss returned value as multiErr is already initialized.
+        }
+        // else do something with that file ...
+    })
 }
 wg.Wait()
 

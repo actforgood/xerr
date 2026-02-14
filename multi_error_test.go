@@ -11,8 +11,8 @@ import (
 	"io"
 	"regexp"
 	"strconv"
-	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/actforgood/xerr"
 )
@@ -245,46 +245,44 @@ func TestMultiError_Unwrap_Is(t *testing.T) {
 func TestMultiError_concurrency(t *testing.T) {
 	t.Parallel()
 
-	// arrange
-	var (
-		subject          = xerr.NewMultiError()
-		goroutinesNo     = 200
-		wg               sync.WaitGroup
-		extractThreadReg = regexp.MustCompile(`\d+`)
-	)
+	synctest.Test(t, func(*testing.T) {
+		// arrange
+		var (
+			subject          = xerr.NewMultiError()
+			goroutinesNo     = 200
+			extractThreadReg = regexp.MustCompile(`\d+`)
+		)
 
-	// act
-	for i := range goroutinesNo {
-		wg.Add(1)
-		go func(mErr *xerr.MultiError, threadNo int) {
-			defer wg.Done()
+		// act
+		for i := range goroutinesNo {
+			go func(mErr *xerr.MultiError, threadNo int) {
+				err := errors.New("err from threadNo " + strconv.FormatInt(int64(threadNo+1), 10))
+				// perform all kind of ops upon subject that can trigger race conditions when running t with -race
+				_ = mErr.Add(err)
+				_ = mErr.AddOnce(err)
+				_ = mErr.Errors()
+				_ = mErr.Error()
+				assertNotNil(t, mErr.ErrOrNil())
+				_ = fmt.Sprintf("%+v", mErr)
+				assertTrue(t, errors.Is(mErr, err))
+			}(subject, i)
+		}
+		synctest.Wait()
 
-			err := errors.New("err from threadNo " + strconv.FormatInt(int64(threadNo+1), 10))
-			// perform all kind of ops upon subject that can trigger race conditions when running t with -race
-			_ = mErr.Add(err)
-			_ = mErr.AddOnce(err)
-			_ = mErr.Errors()
-			_ = mErr.Error()
-			assertNotNil(t, mErr.ErrOrNil())
-			_ = fmt.Sprintf("%+v", mErr)
-			assertTrue(t, errors.Is(mErr, err))
-		}(subject, i)
-	}
-	wg.Wait()
-
-	// assert
-	assertNotNil(t, subject.ErrOrNil())
-	assertEqual(t, goroutinesNo, len(subject.Errors()))
-	sum := 0
-	for _, err := range subject.Errors() {
-		matches := extractThreadReg.FindAllString(err.Error(), 1)
-		if len(matches) == 1 {
-			if threadNo, err := strconv.Atoi(matches[0]); err == nil {
-				sum += threadNo
+		// assert
+		assertNotNil(t, subject.ErrOrNil())
+		assertEqual(t, goroutinesNo, len(subject.Errors()))
+		sum := 0
+		for _, err := range subject.Errors() {
+			matches := extractThreadReg.FindAllString(err.Error(), 1)
+			if len(matches) == 1 {
+				if threadNo, err := strconv.Atoi(matches[0]); err == nil {
+					sum += threadNo
+				}
 			}
 		}
-	}
-	assertEqual(t, goroutinesNo*(goroutinesNo+1)/2, sum)
+		assertEqual(t, goroutinesNo*(goroutinesNo+1)/2, sum)
+	})
 }
 
 func BenchmarkMultiError_concurrentSafe(b *testing.B) {
