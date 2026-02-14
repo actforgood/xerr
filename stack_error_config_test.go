@@ -6,6 +6,7 @@
 package xerr_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/actforgood/xerr"
@@ -43,14 +44,14 @@ func TestSkipFrameGoRootSrcPath(t *testing.T) {
 			{
 				name:        "random path, expect false",
 				inputFnName: "foo.Bar",
-				inputFile:   "/home/user/project/foo/bar.go",
+				inputFile:   filepath.Join("/home", "user", "project", "foo", "bar.go"),
 				next:        xerr.AllowFrame,
 				expected:    false,
 			},
 			{
 				name:        "random path, with next that skips frame, expect true",
 				inputFnName: "foo.Bar",
-				inputFile:   "/home/user/project/foo/bar.go",
+				inputFile:   filepath.Join("/home", "user", "project", "foo", "bar.go"),
 				next: func(_, _ string) bool {
 					nextCallsCnt++
 
@@ -61,14 +62,14 @@ func TestSkipFrameGoRootSrcPath(t *testing.T) {
 			{
 				name:        "std lib function name, expect true",
 				inputFnName: "runtime.goexit",
-				inputFile:   "/maybe/go/root/path",
+				inputFile:   filepath.Join("/maybe", "go", "root", "path"),
 				next:        xerr.AllowFrame,
 				expected:    true,
 			},
 			{
-				name:        "std lib path name, expect true",
+				name:        "std lib path, expect true",
 				inputFnName: "http.(*ServeMux).ServeHTTP",
-				inputFile:   "/usr/local/go/src/net/http/server.go",
+				inputFile:   filepath.Join("/usr", "local", "go", "src", "net", "http", "server.go"),
 				next:        xerr.AllowFrame,
 				expected:    true,
 			},
